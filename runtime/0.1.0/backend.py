@@ -3,6 +3,7 @@
 import argparse
 import contextlib
 import fcntl
+from hashlib import sha256
 import itertools
 import json
 import os
@@ -21,6 +22,7 @@ STOCK = Path('/usr/share/omarchy/themes')
 MAX_ROWS = 256
 MAX_ENTRIES = 1024
 MAX_IMAGE = 32 * 1024 * 1024
+MAX_BACKGROUND_BYTES = 128 * 1024 * 1024
 SLUG = re.compile(r'[a-z0-9][a-z0-9-]{0,63}\Z')
 HEX = re.compile(r'#[0-9a-fA-F]{6}\Z')
 
@@ -212,9 +214,9 @@ def journal():
 PLUGIN='theme-gallery'
 
 def theme_signature(paths):
-    result=[];count=0
+    result=[];count=0;background_bytes=0
     def visit(path,depth=0):
-        nonlocal count
+        nonlocal count,background_bytes
         if depth>5: raise OperationError('Theme exceeds safe directory depth')
         fd=directory(path)
         try:
@@ -231,7 +233,17 @@ def theme_signature(paths):
                 if stat.S_ISDIR(info.st_mode): visit(child,depth+1)
                 elif stat.S_ISREG(info.st_mode):
                     if info.st_size>MAX_IMAGE: raise OperationError('Theme contains an oversized file')
-                    result.append((str(child),fingerprint(info)))
+                    signature=fingerprint(info)
+                    if depth==1 and path.name=='backgrounds' and child.suffix.lower() in ('.png','.jpg','.jpeg','.gif','.webp','.bmp'):
+                        background_bytes+=info.st_size
+                        if background_bytes>MAX_BACKGROUND_BYTES: raise OperationError('Theme backgrounds exceed safe total byte limit')
+                        with opened(child) as (stream,before):
+                            if fingerprint(before)!=signature: raise OperationError('Theme background changed before reading')
+                            data=stream.read(info.st_size+1)
+                            if len(data)!=info.st_size or fingerprint(os.fstat(stream.fileno()))!=signature: raise OperationError('Theme background changed while reading')
+                        # Native transition snapshots hard-link/unlink stills, changing ctime but not content.
+                        signature=signature[:-1]+(info.st_mode,info.st_uid,info.st_gid,sha256(data).digest())
+                    result.append((str(child),signature))
                 else: raise OperationError('Theme contains a symlink or special file; apply refused')
         finally: os.close(fd)
     for path in paths: visit(path)

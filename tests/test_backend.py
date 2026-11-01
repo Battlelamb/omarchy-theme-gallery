@@ -26,6 +26,143 @@ class BackendTests(unittest.TestCase):
         restored=self.b.action('restore:last','restore',True);self.assertTrue(restored['ok'],restored)
         self.assertEqual(self.b.current_theme()[0],'before')
 
+    def test_native_snapshot_hardlink_unlink_ctime_only_allows_apply_and_restore(self):
+        import hashlib
+        images=[]
+        for name in ('before','after'):
+            for user in (False,True):
+                root=self.theme(name,user)/'backgrounds';root.mkdir()
+                p=root/'wall.png';p.write_bytes(png());images.append(p)
+        self.current_theme('before');self.theme_setter()
+        setter=self.home/'bin/omarchy-theme-set'
+        with setter.open('a') as stream:
+            stream.write("import time\ntime.sleep(0.002)\nfor root in (h/'stock',h/'.config/omarchy/themes'):\n p=root/sys.argv[1]/'backgrounds/wall.png'\n snapshot=h/'snapshot.png'\n os.link(p,snapshot)\n snapshot.unlink()\n")
+        baseline={p:(p.stat(),hashlib.sha256(p.read_bytes()).digest()) for p in images}
+        for verb in ('apply','restore'):
+            result=self.b.action('theme:after',verb,True)
+            self.assertTrue(result['ok'],result)
+        for p,(before,digest) in baseline.items():
+            after=p.stat()
+            self.assertEqual(self.b.fingerprint(before)[:-1],self.b.fingerprint(after)[:-1])
+            self.assertNotEqual(before.st_ctime_ns,after.st_ctime_ns)
+            self.assertEqual(before.st_nlink,after.st_nlink)
+            self.assertEqual(digest,hashlib.sha256(p.read_bytes()).digest())
+        self.assertEqual(self.b.current_theme()[0],'before')
+        self.assertEqual(self.b.journal(),{})
+        self.assertEqual([json.loads(line) for line in (self.home/'calls').read_text().splitlines()],[['after'],['before']])
+
+    def test_provider_same_size_background_edit_with_restored_mtime_is_rejected(self):
+        for verb in ('apply','restore'):
+            for index,extension in enumerate(('.png','.JPG','.jpeg','.gif','.webp','.bmp')):
+                with self.subTest(verb=verb,extension=extension):
+                    before_name='before-'+str(index);after_name='after-'+str(index)
+                    self.theme(before_name);self.theme(after_name);self.current_theme(before_name);self.theme_setter()
+                    if verb=='restore':self.assertTrue(self.b.action('theme:'+after_name,'apply',True)['ok'])
+                    target=after_name if verb=='apply' else before_name
+                    root=self.b.STOCK/target/'backgrounds';root.mkdir(exist_ok=True)
+                    p=root/('wall'+extension);p.write_bytes(png())
+                    before=p.stat();original=p.read_bytes()
+                    with (self.home/'bin/omarchy-theme-set').open('a') as stream:
+                        stream.write("p=h/'stock'/sys.argv[1]/'backgrounds'/"+repr(p.name)+"\ns=p.stat()\nwith p.open('r+b') as f:\n f.seek(-1,2)\n f.write(b'X')\nos.utime(p,ns=(s.st_atime_ns,s.st_mtime_ns))\n")
+                    result=self.b.action('theme:'+after_name,verb,True)
+                    self.assertFalse(result['ok'],result)
+                    self.assertIn('sources changed',result['message'])
+                    self.assertEqual(self.b.fingerprint(before)[:-1],self.b.fingerprint(p.stat())[:-1])
+                    self.assertNotEqual(original,p.read_bytes())
+                    self.assertTrue(self.b.journal())
+
+    def test_background_hash_total_budget_spans_stock_and_overlay_before_provider(self):
+        paths=[]
+        for user in (False,True):
+            root=self.theme('after',user)/'backgrounds';root.mkdir()
+            (root/'wall.png').write_bytes(png());paths.append(root.parent)
+        size=len(png());self.current_theme('before');self.theme_setter()
+        with patch.object(self.b,'MAX_BACKGROUND_BYTES',2*size,create=True):
+            self.assertTrue(self.b.theme_signature(paths))
+        with patch.object(self.b,'MAX_BACKGROUND_BYTES',2*size-1,create=True):
+            result=self.b.action('theme:after','apply',True)
+        self.assertFalse(result['ok'],result)
+        self.assertIn('total byte limit',result['message'])
+        self.assertFalse((self.home/'calls').exists())
+
+    def test_background_signature_rejects_chmod_even_with_unchanged_bytes(self):
+        root=self.theme()/'backgrounds';root.mkdir();p=root/'wall.png';p.write_bytes(png())
+        before=self.b.theme_signature([root.parent]);p.chmod(0o600)
+        self.assertNotEqual(before,self.b.theme_signature([root.parent]))
+
+    def test_only_direct_native_still_backgrounds_tolerate_ctime_only_changes(self):
+        root=self.theme();(root/'backgrounds').mkdir();(root/'backgrounds/nested').mkdir()
+        for relative in ('colors.toml','preview.png','backgrounds/wall.mp4','backgrounds/unknown.dat','backgrounds/nested/wall.png'):
+            with self.subTest(path=relative):
+                p=root/relative;p.write_bytes(png());before=self.b.theme_signature([root])
+                os.link(p,self.home/'snapshot');(self.home/'snapshot').unlink()
+                self.assertNotEqual(before,self.b.theme_signature([root]))
+
+    def test_background_signature_retains_directory_identity_and_membership(self):
+        root=self.theme();backgrounds=root/'backgrounds';backgrounds.mkdir();p=backgrounds/'wall.png';p.write_bytes(png())
+        original=self.b.theme_signature([root]);saved=backgrounds.stat()
+        extra=backgrounds/'extra.png';extra.write_bytes(png());os.utime(backgrounds,ns=(saved.st_atime_ns,saved.st_mtime_ns))
+        self.assertNotEqual(original,self.b.theme_signature([root]));extra.unlink()
+        original=self.b.theme_signature([root]);backgrounds.rename(self.home/'old-backgrounds');backgrounds.mkdir()
+        p.write_bytes(png());os.utime(backgrounds,ns=(saved.st_atime_ns,saved.st_mtime_ns))
+        self.assertNotEqual(original,self.b.theme_signature([root]))
+
+    def test_background_signature_rejects_replacement_between_stat_and_open(self):
+        import contextlib
+        root=self.theme()/'backgrounds';root.mkdir();p=root/'wall.png';p.write_bytes(png());actual=self.b.opened
+        @contextlib.contextmanager
+        def replaced(path,limit=self.b.MAX_IMAGE):
+            replacement=self.home/'replacement';replacement.write_bytes(png());os.replace(replacement,p)
+            with actual(path,limit) as value:yield value
+        with patch.object(self.b,'opened',replaced):
+            with self.assertRaisesRegex(self.b.OperationError,'changed before reading'):self.b.theme_signature([root.parent])
+
+    def test_background_signature_rejects_same_size_restored_mtime_edit_during_fd_read(self):
+        import contextlib
+        root=self.theme()/'backgrounds';root.mkdir();p=root/'wall.png';p.write_bytes(png());actual=self.b.opened
+        @contextlib.contextmanager
+        def racing(path,limit=self.b.MAX_IMAGE):
+            with actual(path,limit) as (stream,info):
+                class Proxy:
+                    def read(inner,n):
+                        data=stream.read(n)
+                        with p.open('r+b') as changed:changed.seek(-1,2);changed.write(b'X')
+                        os.utime(p,ns=(info.st_atime_ns,info.st_mtime_ns))
+                        return data
+                    def fileno(inner):return stream.fileno()
+                yield Proxy(),info
+        with patch.object(self.b,'opened',racing):
+            with self.assertRaisesRegex(self.b.OperationError,'changed while reading'):self.b.theme_signature([root.parent])
+
+    def test_background_signature_rejects_growing_fd_read(self):
+        import contextlib
+        root=self.theme()/'backgrounds';root.mkdir();p=root/'wall.png';p.write_bytes(png());actual=self.b.opened
+        @contextlib.contextmanager
+        def growing(path,limit=self.b.MAX_IMAGE):
+            with actual(path,limit) as (stream,info):
+                with p.open('ab') as changed:changed.write(b'X')
+                yield stream,info
+        with patch.object(self.b,'opened',growing):
+            with self.assertRaisesRegex(self.b.OperationError,'changed while reading'):self.b.theme_signature([root.parent])
+
+    def test_background_signature_rejects_symlinks_special_files_and_existing_tree_limits(self):
+        root=self.theme();backgrounds=root/'backgrounds';backgrounds.mkdir();p=backgrounds/'wall.png'
+        for kind in ('symlink','fifo','oversized'):
+            with self.subTest(kind=kind):
+                if kind=='symlink':p.symlink_to(self.image())
+                elif kind=='fifo':os.mkfifo(p)
+                else:
+                    with p.open('wb') as stream:stream.truncate(self.b.MAX_IMAGE+1)
+                with self.assertRaises(self.b.OperationError):self.b.theme_signature([root])
+                p.unlink()
+        deep=backgrounds
+        for _ in range(5):deep=deep/'nested';deep.mkdir()
+        with self.assertRaisesRegex(self.b.OperationError,'depth'):self.b.theme_signature([root])
+        import shutil
+        shutil.rmtree(backgrounds);backgrounds.mkdir()
+        for index in range(2049):(backgrounds/str(index)).touch()
+        with self.assertRaisesRegex(self.b.OperationError,'entry limit'):self.b.theme_signature([root])
+
     def test_theme_provider_budget_fits_parent_30_second_watchdog(self):
         self.theme('before');self.theme('after');self.current_theme('before');self.theme_setter()
         actual=self.b.run;budgets=[]
