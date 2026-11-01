@@ -17,6 +17,15 @@ def png(rgb=(255,0,0)):
     return b'\x89PNG\r\n\x1a\n'+chunk(b'IHDR',struct.pack('!2I5B',2,2,8,2,0,0,0))+chunk(b'IDAT',zlib.compress((b'\0'+bytes(rgb)*2)*2))+chunk(b'IEND',b'')
 
 class BackendTests(unittest.TestCase):
+    def test_restore_last_survives_missing_applied_theme_row_but_rejects_other_id(self):
+        self.theme('before');after=self.theme('after');self.current_theme('before');self.theme_setter()
+        self.assertTrue(self.b.action('theme:after','apply',True)['ok'])
+        (after/'colors.toml').unlink();after.rmdir()
+        value=self.b.catalog();self.assertNotIn('theme:after',[r['id'] for r in value['rows']]);self.assertIn('restore',value['actions'])
+        self.assertFalse(self.b.action('theme:before','restore',True)['ok'])
+        restored=self.b.action('restore:last','restore',True);self.assertTrue(restored['ok'],restored)
+        self.assertEqual(self.b.current_theme()[0],'before')
+
     def test_theme_provider_budget_fits_parent_30_second_watchdog(self):
         self.theme('before');self.theme('after');self.current_theme('before');self.theme_setter()
         actual=self.b.run;budgets=[]
@@ -111,19 +120,19 @@ class BackendTests(unittest.TestCase):
         after={str(p.relative_to(self.home)):p.read_bytes() for p in self.home.rglob('*') if p.is_file()}
         self.assertEqual(after,before)
     def test_catalog_rejects_symlink_ancestor(self):
-        outside=self.home/'external';outside.mkdir();(outside/'escape.png').write_bytes(png())
-        (self.home/'Pictures').symlink_to(outside,target_is_directory=True)
-        self.assertEqual(self.b.image_files(),[])
-    def test_fifo_and_oversized_image_are_not_members(self):
-        p=self.image();root=p.parent
+        outside=self.home/'external';outside.mkdir();(outside/'escape').mkdir()
+        parent=self.home/'.config/omarchy';parent.mkdir(parents=True)
+        (parent/'themes').symlink_to(outside,target_is_directory=True)
+        self.assertEqual(self.b.catalog()['rows'],[])
+    def test_fifo_and_oversized_image_are_not_previews(self):
+        theme=self.theme();root=theme/'backgrounds';root.mkdir()
+        p=root/'valid.png';p.write_bytes(png())
         os.mkfifo(root/'pipe.png')
         with (root/'large.png').open('wb') as stream: stream.truncate(self.b.MAX_IMAGE+1)
-        self.assertEqual(self.b.image_files(),[p])
-    def test_ids_change_on_replacement_but_not_refresh(self):
-        p=self.image();first=self.b.token(p)
-        self.assertEqual(self.b.token(p),first)
-        replacement=p.with_name('replace');replacement.write_bytes(png((0,255,0)));replacement.replace(p)
-        self.assertNotEqual(self.b.token(p),first)
+        self.assertEqual(self.b.catalog()['rows'][0]['preview'],str(p))
+    def test_theme_runtime_does_not_ship_test_only_wallpaper_discovery(self):
+        for name in ('image_roots','image_files','token','MAX_FILES','hashlib'):
+            self.assertFalse(hasattr(self.b,name),name+' is not part of theme runtime')
     def test_racing_file_read_fails_closed(self):
         p=self.image();actual=self.b.opened
         import contextlib
@@ -154,10 +163,11 @@ class BackendTests(unittest.TestCase):
             self.assertFalse(self.b.action(value,'apply',True)['ok'])
             self.assertFalse(self.b.action(value,'restore',True)['ok'])
         self.assertFalse((self.home/'injected').exists())
-    def test_scan_budget_does_not_read_overfull_directory(self):
-        p=self.image()
-        for i in range(self.b.MAX_ENTRIES): (p.parent/str(i)).touch()
-        self.assertEqual(self.b.image_files(),[])
+    def test_scan_budget_does_not_read_overfull_preview_directory(self):
+        theme=self.theme();root=theme/'backgrounds';root.mkdir()
+        (root/'wall.png').write_bytes(png())
+        for i in range(self.b.MAX_ENTRIES): (root/str(i)).touch()
+        self.assertNotIn('preview',self.b.catalog()['rows'][0])
     def test_png_dimension_bomb_is_rejected(self):
         p=self.image();data=bytearray(p.read_bytes());data[16:24]=struct.pack('!II',100000,100000);p.write_bytes(data)
         self.assertFalse(self.b.valid_image(p))

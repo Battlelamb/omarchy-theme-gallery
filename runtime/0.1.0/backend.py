@@ -3,7 +3,6 @@
 import argparse
 import contextlib
 import fcntl
-import hashlib
 import itertools
 import json
 import os
@@ -20,7 +19,6 @@ import tomllib
 
 STOCK = Path('/usr/share/omarchy/themes')
 MAX_ROWS = 256
-MAX_FILES = 512
 MAX_ENTRIES = 1024
 MAX_IMAGE = 32 * 1024 * 1024
 SLUG = re.compile(r'[a-z0-9][a-z0-9-]{0,63}\Z')
@@ -116,29 +114,6 @@ def valid_image(path):
         with opened(path) as (stream,info): image_type(stream.read(64))
         return True
     except (OSError,ValueError): return False
-
-def image_roots():
-    roots=[]
-    for base in (home()/'Pictures/Wallpapers',home()/'.config/omarchy/backgrounds'):
-        roots.append(base)
-        roots.extend(base/name for name in names(base) if is_directory(base/name))
-    roots += [p/'backgrounds' for paths in themes().values() for p in paths]
-    roots.append(home()/'.local/state/omarchy/current/theme/backgrounds')
-    return roots[:MAX_FILES]
-
-def image_files():
-    result=[];seen=set()
-    for root in image_roots():
-        for name in names(root):
-            p=root/name
-            if p not in seen and valid_image(p):
-                result.append(p);seen.add(p)
-                if len(result)>=MAX_FILES: return result
-    return result
-
-def token(p):
-    with opened(p) as (_,info): stamp=fingerprint(info)
-    return hashlib.sha256((str(p)+repr(stamp)).encode()).hexdigest()[:32]
 
 def catalog():
     rows=[]
