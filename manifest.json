@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "id": "leviathan.theme-gallery",
+  "name": "Theme Gallery",
+  "version": "0.1.0",
+  "author": "Ömer Eren",
+  "license": "GPL-3.0-only",
+  "description": "Browse installed Omarchy themes with large previews and an explicit Apply action.",
+  "kinds": [
+    "overlay"
+  ],
+  "keepLoaded": true,
+  "entryPoints": {
+    "overlay": "runtime/0.1.0/ThemeGallery.qml"
+  }
+}
