@@ -1,0 +1,27 @@
+{
+  "search": "Search local themes…",
+  "loading": "Loading…",
+  "empty": "No matching items",
+  "loadFailed": "Unable to load catalogue. Check the backend and try Refresh.",
+  "apply": "Apply theme",
+  "copy": "Copy",
+  "launch": "Launch",
+  "export": "Export",
+  "restore": "Restore",
+  "confirm": "Keep effect",
+  "select": "Select an item",
+  "refresh": "Refresh",
+  "working": "Working…",
+  "keys": "Arrows select · Enter apply · Esc close",
+  "results": {
+    "one": "%1 theme shown",
+    "other": "%1 themes shown"
+  },
+  "title": "Theme Gallery",
+  "explore": "Explore",
+  "configure": "Configure",
+  "clearSearch": "Clear search",
+  "details": "Selection details",
+  "subtitle": "A new atmosphere for your desktop.",
+  "safety": "Apply runs normal theme hooks; Restore is a compensating selection."
+}

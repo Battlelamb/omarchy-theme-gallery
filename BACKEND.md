@@ -29,8 +29,8 @@ Current Ponytail backend verification: 30 cases pass in the masked offline `scri
 System Python 3.11+ / standard library only; tested with installed Python 3.14.8. No cross-plugin imports, new packages, framework, daemon, network, installer, or autostart. Runtime paths do not depend on cwd. The UI calls:
 
 ```
-/usr/bin/python3 runtime/0.1.0/backend.py catalog
-/usr/bin/python3 runtime/0.1.0/backend.py action --id ID --verb VERB --apply
+/usr/bin/python3 runtime/0.2.0/backend.py catalog
+/usr/bin/python3 runtime/0.2.0/backend.py action --id ID --verb VERB --apply
 ```
 
 Catalog returns one JSON object with bounded unique rows, actions and actionLabel. Explicit actions return `{ok,message}` and optional `path`; CLI exits nonzero for any unconfirmed/partial result. No action is performed without `--apply`. Unknown/stale IDs are rejected against fresh bounded membership. `restore:last` is accepted only when a matching durable receipt exists and does not require the applied theme's catalog row. A different selected row is not authorization to restore the last operation. Theme actions omit action-result capability hints, preserving the normal post-success catalog refresh.
@@ -43,14 +43,14 @@ Plugin-owned state is under `$HOME/.local/state/omarchy-<slug>/`, private modes 
 
 ## Repeatable offline verification
 
-From this project's root, with TMPDIR pointing at the approved scratch directory:
+From this project's root, use the shipped offline runner with TMPDIR naming an existing approved private scratch directory:
 
-```
-/usr/bin/python3 tests/run_backend_box.py new-receipt-label
+```sh
+TMPDIR="${TMPDIR:?Set TMPDIR to an existing private scratch directory}" env -u PYTHONPATH PATH=/usr/bin /usr/bin/python3 scripts/run-tests.py --backend-only
 ```
 
-The runner uses bwrap --unshare-all --clearenv, read-only source/usr/system ImageMagick policy, empty stock fixture, fake HOME, private /run and /tmp, and no host sockets, display or network. It also masks actual theme/background/shell executables with refusal stubs. Every successful setter in tests is a fixture shim inside the box. Tests execute the required `env -u PYTHONPATH /usr/bin/python3 -m unittest discover -s tests -p 'test_*.py' -v`. The runner refuses receipt overwrite. Do not run unittest on the live session.
+The runner uses bwrap --unshare-all --clearenv, read-only source/usr/system ImageMagick policy, empty stock fixture, fake HOME, private /run and /tmp, and no host sockets, display or network. It also masks actual theme/background/shell executables with refusal stubs. Every successful setter in tests is a fixture shim inside the box. Inside the cleared box, tests execute `/usr/bin/python3 -m unittest discover -s tests -p 'test_*.py' -v`; the outer invocation explicitly clears PYTHONPATH too. The current runner streams results without creating receipts. The earlier `tests/run_backend_box.py` runner created the historical ignored `release-output/` receipts; those receipts are not shipped or required for the public test command. Do not run unittest on the live session.
 
 Feature RED/GREEN receipts and extra boundary-control receipts are retained under ignored release-output. An initial missing-method discovery error is retained alongside its corrected assertion-based RED. Runtime feature slices were tested before implementation; additional passing characterization controls were added for existing guards. The first final portable-runner attempt failed before tests because a destination was a symlink; canonical target deduplication fixed it without changing any test threshold. That failed receipt is preserved.
 
-No GUI, compositor setters, native renderer pixels, live theme/background changes, installation, enablement, package installation, publication or push was exercised. Headless fixture shims establish adapter logic, not successful live desktop integration. A separate read-only stock catalog probe uses real installed theme/image data in an offline fake-HOME box with setters masked. See release-output/backend-result.json for exact counts, source hashes and receipt names. Source provenance is in data/source-ledger.json and NOTICE.backend.md.
+No GUI, compositor setters, native renderer pixels, live theme/background changes, installation, enablement, package installation, publication or push was exercised. Headless fixture shims establish adapter logic, not successful live desktop integration. A separate read-only stock catalog probe uses real installed theme/image data in an offline fake-HOME box with setters masked. See release-output/backend-result.json for exact counts, source hashes and receipt names. Source provenance is in `runtime/0.2.0/data/source-ledger.json` and NOTICE.backend.md.
