@@ -1,155 +1,103 @@
-<div align="center">
-
 # Theme Gallery
 
-**Find the right atmosphere. Save the combination. Apply it deliberately.**
+**Find a theme, keep its wallpaper pairing, apply it deliberately.**
 
-[![Component checks](https://github.com/Battlelamb/omarchy-theme-gallery/actions/workflows/ci.yml/badge.svg)](https://github.com/Battlelamb/omarchy-theme-gallery/actions/workflows/ci.yml)
+Browse installed themes with local previews and real color swatches. Narrow the gallery to user or stock sources, save favorites, and capture a named theme–wallpaper combination without changing the desktop.
 
-[Install](#install) · [Explore](#explore-your-themes) · [Save a combination](#save-a-theme--wallpaper-combination) · [Configure](#configure) · [Restore](#what-restore-can-and-cannot-do)
+> **0.4.0 development candidate — not a stable release or installed upgrade.** Backend behavior is checked offline with fixture providers. Native UI integration, live Apply/Restore and the full nested upgrade/rollback gate require separate qualification.
 
-</div>
+![Theme Gallery 0.4.0 native Browse with illustrative catalogue data](preview.png)
 
-Browse installed themes with local image previews and real color swatches, then keep a favorite theme and wallpaper together as a named combination. Theme changes run Omarchy's normal hooks, rather than quietly editing configuration behind its back.
+*Illustrative **0.4.0** native Qt component render with fictional/original example data. No installed library, desktop action or full-shell behavior is demonstrated. [Preview provenance](docs/PREVIEW.md).*
 
-> [!IMPORTANT]
-> **0.3.0 is a development/testing source snapshot, not a stable release.** It has been installed and opened on the maintainer's desktop for hands-on testing. Live Apply/Restore and the full nested old/new/rollback sequence are not qualified for this version.
+<details>
+<summary>Preview native saved settings</summary>
 
-![Theme Gallery native interface with six original geometric theme studies and a selected-image preview](preview.png)
-*Historical 0.2.1 native Qt/Quickshell capture from an isolated headless compositor. The catalogue and original geometric art are illustrative, not bundled installable themes. Actions were not exercised; this is not 0.3.0 integration proof. [Preview provenance](docs/PREVIEW.md).*
+![Theme Gallery 0.4.0 native Configure](configure-preview.png)
 
-## Install
+*Illustrative Configure view; fields may scroll. The capture does not exercise Save or Reset.*
 
-Requires **Omarchy Quattro's native shell**, Python **3.11+**, and the installed Omarchy theme/background setters. No sibling plugin or shared framework is required. Plugins execute as your user inside the shell, so review the source before enabling one.
+</details>
+
+## Install and open
+
+Requires **Omarchy Quattro's native shell**, **Python 3.11+**, and Omarchy's installed theme/background setters. Each plugin works independently. Shell plugins run as your user; review the source before enabling.
 
 ```sh
 omarchy plugin add https://github.com/Battlelamb/omarchy-theme-gallery.git --enable
 omarchy-shell shell summon leviathan.theme-gallery
 ```
 
-The Git install follows repository source, not a stable release tag. It does not install themes, wallpapers or fonts.
+Git installation follows the repository source, not an unreleased candidate or stable tag. No themes, wallpapers or fonts are installed. If you already have **Super+Space → Appearance → Theme Gallery**, keep that shortcut; the summon command also works independently.
 
-<details>
-<summary>Optional: Super+Space → Appearance → Theme Gallery</summary>
+## Explore and choose
 
-Back up `~/.config/omarchy/extensions/omarchy-menu.jsonc`, then merge this entry into its existing menu object (or its `items` object, if used). Preserve the other entries. Create the file only if it does not exist; do not replace an existing menu with this snippet.
+| Control | Result |
+| --- | --- |
+| Type to search | Narrow the current catalogue. |
+| Click a tile; arrows; Home / End | Select a theme and inspect its preview/swatches; nothing is applied. |
+| **Enter / Apply theme** | Run the normal Omarchy theme hooks, then check their result. |
+| **More → Favorite** | Toggle a saved favorite. Favorites/Recent views help revisit selections. |
+| **Refresh** | Reread installed sources. |
+| **Esc** / click outside | Leave Configure first or dismiss the panel; accepted actions are not undone. |
 
-```jsonc
-{
-  "appearance.theme-gallery": {
-    "label": "Theme Gallery",
-    "action": "omarchy-shell shell summon leviathan.theme-gallery"
-  }
-}
-```
+Swatches come from `colors.toml`; valid user-overlay colors take precedence. Light/dark uses the background color's relative luminance, not a guessed theme name. Missing background colors remain **unknown**.
 
-This optional shortcut is not installed automatically. The summon command works independently.
+### Save a combination
 
-</details>
+Select an installed theme, enter a unique **Capture name** under **More**, then choose **capture**. Capture saves that theme with the current safe local wallpaper; it does not Apply. The saved combination gets its own tile. Applying it runs theme hooks first and then selects frozen wallpaper bytes.
 
-## Explore your themes
-
-| You want to… | Control | What happens |
-| --- | --- | --- |
-| Find a theme | Type in the panel | Filters the current catalogue. |
-| Inspect without changing anything | Click a tile; arrows; Home / End | Selects a result and shows its local preview and swatches. |
-| Change the desktop theme | **Enter / Apply theme** | Runs normal Omarchy theme hooks and checks their result. |
-| Keep a favorite close | **More → Favorite** | Saves a local favorite; use the Favorites view to find it. |
-| Revisit a successful selection | **Recent** view | Lists confirmed Apply operations, not every click. |
-| Reread installed files | **Refresh** | Rebuilds the catalogue. |
-| Leave the panel | **Esc** or click outside | Esc leaves Configure first; closing does not undo an accepted action. |
-
-Swatches come from installed `colors.toml` files, with valid user-overlay colors taking precedence. Light/dark classification uses the background color's relative luminance. An absent or invalid background stays **unknown**, visible under All rather than guessed.
-
-Your catalogue reflects your installed stock/user themes. There is no fixed theme count and no downloadable theme pack in this repository. Wide layouts show a side preview; compact layouts use the scrolling detail area.
-
-## Save a theme + wallpaper combination
-
-1. Select an **installed theme** tile.
-2. Open **More**, enter a unique **Capture name** of up to 64 characters, then choose **capture**.
-3. Find the saved combination as its own tile. **Apply theme** runs the theme hooks first, then explicitly sets the combination's frozen wallpaper bytes.
-
-Capture saves the selected theme with the **current wallpaper**, without applying either. The image must be in a supported safe local root, or be this plugin's own hash-verified snapshot. An optional `wallpaper` path can select another local image through the action data/CLI contract in [BACKEND.md](BACKEND.md); nothing is downloaded.
-
-Saved combinations are reserved three-item collection records, not ordinary editable lists. To remove one, enter its name under **More → Collection name → Delete collection**. Do not use **Add/remove item** to edit a combination. Changed source-image bytes require a new capture; saved image paths are limited to 251 characters.
+An optional local `wallpaper` path is available through the [backend contract](BACKEND.md). Capture names are at most 64 characters; image paths at most 251. Changed image bytes require a new capture. Combinations are reserved records: delete one by name with **Delete collection**, not **Add/remove item**.
 
 ## Configure
 
-Open **Configure**, adjust the options, then choose **Save settings**.
+Open **Configure**, change options, then **Save settings**.
 
-| Setting | Default | Choices |
+| Setting | Default | Choices / behavior |
 | --- | --- | --- |
-| Light / dark filter | All | All, light, dark; unknown is included only in All. |
-| Favorites only | Off | Restrict the backend catalogue to saved favorites. |
+| Theme source | All | All, user, stock. A stock theme with an admitted user overlay is **user**; its saved combinations follow the same source. |
+| Light / dark filter | All | All, light, dark. Unknown appears only in All. |
+| Favorites only | Off | Restrict results to saved favorites. |
+| Density | Comfortable | Comfortable or compact. |
+| Layout | Grid | Grid or list. |
+| Sort order | Default | Default, name, favorites-first; ties retain their order. |
 
-Preferences are stored outside the plugin checkout:
+Source, appearance and favorite filters, then saved name/favorites-first ordering, run **before the 256-tile display cap** over the admitted bounded catalogue. Default keeps source order; name uses lowercase ordinal comparison and ties retain source order. Search and Favorites/Recent/collection views operate locally on those returned tiles, not the entire source set. Display options do not restrict fresh action membership or Restore authority.
 
-```text
-$XDG_CONFIG_HOME/omarchy/lego/theme-gallery/preferences.json
-# Fallback when XDG_CONFIG_HOME is not absolute:
-$HOME/.config/omarchy/lego/theme-gallery/preferences.json
-```
+Preferences survive source updates under `$XDG_CONFIG_HOME/omarchy/lego/theme-gallery/preferences.json`, falling back to `$HOME/.config/omarchy/lego/theme-gallery/preferences.json` when XDG is not absolute. **Reset preferences** clears options, favorites, recent items and combinations, not desktop state or recovery data. Corrupt/unsafe stores are refused rather than silently replaced.
 
-**Reset preferences** clears options, favorites, recent items and saved combinations. It does **not** restore the desktop or erase recovery receipts/snapshots. Unsafe or corrupt files are refused rather than silently replaced.
+## Apply safely; Restore honestly
 
-## What Restore can and cannot do
+**Restore is one-level compensation, not complete hook rollback.** It reapplies the previous installed theme through normal hooks; a combination also restores its verified previous-wallpaper snapshot. Application retints and arbitrary hook effects are not universally reversible.
 
-**Restore is a one-level compensating selection, not a complete rollback.** It reruns the previous installed theme through normal hooks. For an applied combination it also restores a verified snapshot of the previous wallpaper. Application retints and other hook side effects are not universally reversible.
+Changed theme generation, unrelated wallpaper choices, edited snapshots or unconfirmed/warning-bearing providers refuse success. A partial operation or failed Restore can leave changed state: refresh and inspect the warning. Closing, disabling or removing the plugin never automatically restores the desktop.
 
-Restore refuses a changed theme generation, an edited snapshot, or an unrelated external wallpaper selection. Warnings, missing acknowledgements and partial operations remain failures even when the theme name changed. Restore itself can fail partially; refresh and inspect the error instead of assuming the desktop returned to its former state. Closing, disabling or removing the plugin is not an automatic undo.
+- Only bounded installed stock/user themes and supported local image roots are admitted. Symlinked files/ancestors, traversal, special files and symlink-shadowed themes are excluded.
+- Actions revalidate installed membership even when an item is filtered out or beyond the tile cap. No downloads, arbitrary commands or config-template execution.
+- Combination snapshots: `$HOME/.local/state/omarchy-theme-gallery/`, **16 files / 256 MiB total**, **32 MiB per image**, no automatic pruning. Preserve active/Restore-owned snapshots.
+- New preference saves share **128 KiB**; valid legacy stores are read up to **16 MiB** for Reset/recovery. Confirmed Apply stays successful if only a later Recent-save/optional snapshot fails, with a warning.
 
-Combination snapshots live under `$HOME/.local/state/omarchy-theme-gallery/`, limited to **16 files / 256 MiB**, with **32 MiB per image**. They are not automatically pruned. Preserve snapshots in use by the active desktop or Restore receipt.
+See [BACKEND.md](BACKEND.md) for exact CLI, safe roots, bounded source signatures and recovery rules.
 
-### Local-only boundaries
+## Verify or troubleshoot
 
-- Supported combination images come from `~/Pictures/Wallpapers`, Omarchy user backgrounds and one collection level, installed-theme backgrounds, or staged current-theme backgrounds. Only this plugin's verified snapshots are additionally admitted, not another plugin's state directory.
-- Symlinked files/ancestors, traversal, special files and over-budget sources are refused. The known Omarchy current-background link is read only through separate target validation.
-- At most **256 filtered tiles** are displayed. Actions recheck fresh installed membership, not just the visible subset. No image or font library is bundled.
-
-<details>
-<summary>Verification and troubleshooting</summary>
-
-The recorded frozen 0.3.0 offline gate passed **71 Python tests** with **1 explicit skip**, plus **51 Node component tests**. Native component fixtures and package checks are separate overlapping coverage, not a live action result. See [validation history](docs/VALIDATION.md) and [CI scope](docs/CI.md). The badge above reports GitHub's actual workflow state; it is not a static pass claim.
-
-The current testing deployment has been opened/captured/closed with real catalogue data. That does not qualify live Apply/Restore, long-soak behavior or the full nested upgrade/rollback gate. Earlier validation notes retain their historical deployment status; the source snapshot remains unqualified for stable release.
-
-To rerun the shipped offline backend checks from a checkout, first set `TMPDIR` to an existing private scratch directory. The runner requires its offline bwrap prerequisites:
+From a checkout, set `TMPDIR` to an existing private scratch directory, then run the shipped offline bwrap harness:
 
 ```sh
 env -u PYTHONPATH /usr/bin/python3 scripts/run-tests.py --backend-only
 ```
 
-The runner uses a cleared fake HOME, no network/live compositor sockets and fixture setters. It does not prove application-hook completeness or displayed pixels.
+It clears HOME/environment, masks production setters and excludes network/live desktop sockets. These checks are not native pixel, live-hook or deployment proof. [Validation history](docs/VALIDATION.md) describes earlier builds, not a new candidate pass.
 
-| Symptom | Check |
-| --- | --- |
-| A theme is missing | Clear search, view and Configure filters; Refresh. Check that the theme is safely installed. |
-| Capture is refused | Select an installed theme, use a new name, check the current image's safe-root membership and snapshot quota. |
-| Restore is refused | An external change or changed snapshot may have invalidated ownership. Do not bypass the conflict check. |
-| A preference warning follows Apply | The confirmed theme action is not undone by a later Recent-save or optional snapshot warning. |
-
-New preference writes share an aggregate **128 KiB** budget. Larger valid legacy stores remain bounded/readable for explicit Reset/recovery; this does not promise every list's maximum can be used simultaneously. [Exact CLI, limits and recovery contract](BACKEND.md).
-
-</details>
-
-<details>
-<summary>Disable or remove</summary>
-
-Use Restore first if you want the available compensation.
+Missing theme? Clear search/view/Configure filters, Refresh, then check safe installation and scan limits. Refused Restore? Check for external state changes; do not bypass ownership checks.
 
 ```sh
 omarchy-shell shell hide leviathan.theme-gallery
 omarchy plugin disable leviathan.theme-gallery
-# Optional:
+# Optional; does not remove preferences/snapshots or undo desktop changes:
 omarchy plugin remove leviathan.theme-gallery
 ```
 
-Removal is not desktop restoration or cleanup of preferences and recovery data.
-
-</details>
-
----
-
 **GPL-3.0-only** · [License](LICENSE) · [Source notices](NOTICE.md) · [Backend attribution](NOTICE.backend.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md)
 
-Independent community plugin by Ömer Eren. Not an official Omarchy or HyDE release.
+Independent community plugin by Ömer Eren; not an official Omarchy or HyDE release.

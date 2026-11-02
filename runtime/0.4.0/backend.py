@@ -21,6 +21,10 @@ import tomllib
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 PREFERENCE_SCHEMA = {
+    'density': {'type':'enum','default':'comfortable','choices':['comfortable','compact'],'label':'Density'},
+    'layout': {'type':'enum','default':'grid','choices':['grid','list'],'label':'Layout'},
+    'sortOrder': {'type':'enum','default':'default','choices':['default','name','favorites-first'],'label':'Sort order'},
+    'themeSource': {'type':'enum','default':'all','choices':['all','user','stock'],'label':'Theme source'},
     'appearance': {'type':'enum','default':'all','choices':['all','light','dark'],'label':'Light / dark filter'},
     'favoritesOnly': {'type':'boolean','default':False,'label':'Favorites only'},
 }
@@ -219,14 +223,20 @@ def catalog():
             candidates += [p/'backgrounds'/n for n in names(p/'backgrounds')]
             for candidate in candidates:
                 if valid_image(candidate): row['preview']=str(candidate);break
+        row['source']='stock' if paths[-1].parent==STOCK else 'user'
         row.update(theme_colors(paths));rows.append(row)
     prefs=prefs_module().read(PLUGIN,PREFERENCE_SCHEMA)
     members=themes()
     for identity,(name,theme,path,_) in saved_pairs(prefs).items():
         row={'id':identity,'label':name,'detail':theme+' · '+path.name,'preview':str(path),'collection':'Saved combinations'}
+        row['source']='stock' if members[theme][-1].parent==STOCK else 'user'
         row.update(theme_colors(members[theme]));rows.append(row)
-    for row in rows: row['favorite']=row['id'] in prefs['favorites']
-    rows=[row for row in rows if (prefs['options']['appearance']=='all' or row['category']==prefs['options']['appearance']) and (not prefs['options']['favoritesOnly'] or row['favorite'])]
+    favorites=set(prefs['favorites'])
+    for row in rows: row['favorite']=row['id'] in favorites
+    rows=[row for row in rows if (prefs['options']['themeSource']=='all' or row['source']==prefs['options']['themeSource']) and (prefs['options']['appearance']=='all' or row['category']==prefs['options']['appearance']) and (not prefs['options']['favoritesOnly'] or row['favorite'])]
+    # Match Controller's lowercase UTF-16 ordinal order; stable sorts retain input ties.
+    if prefs['options']['sortOrder']=='name': rows.sort(key=lambda row:row['label'].lower().encode('utf-16-be'))
+    elif prefs['options']['sortOrder']=='favorites-first': rows.sort(key=lambda row:not row['favorite'])
     return {'rows':rows[:MAX_ROWS],'preferences':prefs,'settingsSchema':PREFERENCE_SCHEMA,'message':('Installed themes; explicit Apply runs normal Omarchy hooks. Symlinked themes excluded; display cap 256, per-root entry cap 1024.' if rows else 'No safe installed themes match the current filters/roots.'),'actions':['apply','favorite','capture']+(['restore'] if journal().get('before') in themes() else []),'actionLabel':'Apply'}
 
 

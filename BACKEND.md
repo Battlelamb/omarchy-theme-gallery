@@ -1,18 +1,18 @@
-# Theme Gallery backend — v0.3.0
+# Theme Gallery backend — v0.4.0
 
 ## Exact CLI
 
 Run from the plugin checkout (the backend itself does not depend on cwd):
 
 ```sh
-/usr/bin/python3 runtime/0.3.0/backend.py catalog
-/usr/bin/python3 runtime/0.3.0/backend.py preferences
-/usr/bin/python3 runtime/0.3.0/backend.py preferences --apply --payload '{"options":{"appearance":"dark","favoritesOnly":false}}'
-/usr/bin/python3 runtime/0.3.0/backend.py action --id theme:INSTALLED-SLUG --verb favorite --apply
-/usr/bin/python3 runtime/0.3.0/backend.py action --id theme:INSTALLED-SLUG --verb capture --apply --payload '{"name":"Reading","wallpaper":"/absolute/supported/local/image.png"}'
-/usr/bin/python3 runtime/0.3.0/backend.py action --id ID-FROM-CATALOG --verb apply --apply
-/usr/bin/python3 runtime/0.3.0/backend.py action --id restore:last --verb restore --apply
-/usr/bin/python3 runtime/0.3.0/backend.py preferences --apply --payload '{"reset":true}'
+/usr/bin/python3 runtime/0.4.0/backend.py catalog
+/usr/bin/python3 runtime/0.4.0/backend.py preferences
+/usr/bin/python3 runtime/0.4.0/backend.py preferences --apply --payload '{"options":{"themeSource":"user","appearance":"dark","favoritesOnly":false}}'
+/usr/bin/python3 runtime/0.4.0/backend.py action --id theme:INSTALLED-SLUG --verb favorite --apply
+/usr/bin/python3 runtime/0.4.0/backend.py action --id theme:INSTALLED-SLUG --verb capture --apply --payload '{"name":"Reading","wallpaper":"/absolute/supported/local/image.png"}'
+/usr/bin/python3 runtime/0.4.0/backend.py action --id ID-FROM-CATALOG --verb apply --apply
+/usr/bin/python3 runtime/0.4.0/backend.py action --id restore:last --verb restore --apply
+/usr/bin/python3 runtime/0.4.0/backend.py preferences --apply --payload '{"reset":true}'
 ```
 
 `INSTALLED-SLUG`, the wallpaper path and `ID-FROM-CATALOG` are placeholders, not literal valid selections. `capture` accepts exactly `name` and optional `wallpaper`; omitting wallpaper uses the validated current-background link target. It requires an installed `theme:` row, not another combination. A name is nonempty/control-free, ≤64 characters, and cannot replace an existing named collection. Paths are ≤251 characters. Capture saves preferences only and never invokes setters. It inserts its named record using the preference store’s locked targeted merge with an expected-absent check inside the same lock. Other collections acknowledged concurrently through the preferences CLI survive; a concurrent same-name save wins admission and the stale Capture refuses without changing stored bytes. Other verbs accept **no payload**.
@@ -25,12 +25,18 @@ Only `catalog`, `preferences`, `action` are commands. Unknown/abbreviated option
 
 | Key | Type | Default | Allowed values |
 | --- | --- | --- | --- |
+| `density` | enum | `comfortable` | `comfortable`, `compact` (native UI only) |
+| `layout` | enum | `grid` | `grid`, `list` (native UI only) |
+| `sortOrder` | enum | `default` | `default`, `name`, `favorites-first` (stable ordering before backend display cap) |
+| `themeSource` | enum | `all` | `all`, `user`, `stock` |
 | `appearance` | enum | `all` | `all`, `light`, `dark` |
 | `favoritesOnly` | boolean | false | JSON boolean |
 
 Preference responses are `{ok,preferences,settingsSchema,message}`. The preference document is `{version:1,favorites:[],recent:[],collections:{},options:{...}}`. Patches accept only `options`, `favorites`, `collections`; recent/version are backend-owned. `{"reset":true}` must be the sole key and resets that preference document, not effects/recovery state. The local sibling `preferences.py` supplies bounded validated reads, private storage, locking and atomic merge/replace. Absolute `XDG_CONFIG_HOME` is preferred, otherwise `$HOME/.config`; path suffix `omarchy/lego/theme-gallery/preferences.json`. Invalid existing data is never silently overwritten.
 
 Combination records occupy `collections[name] = ["theme:<slug>", "wall:<absolute-path>", "sha256:<64-lowercase-hex>"]`. Other inert collection records do not become action authority. Catalog IDs are `theme:<slug>` and `pair:<first32-SHA256(name)>`; pair actions freshly revalidate the stored structure, installed theme, safe source and captured wallpaper digest. Edit/delete combinations via an explicit collections replacement; Reset also removes them.
+
+`themeSource` follows actual admitted source precedence: the last installed layer is authoritative, so a stock theme with an admitted user overlay belongs to `user`, never both filters. Stock-only themes belong to `stock`; a user symlink shadow still blocks the slug. Saved combinations inherit their referenced theme's admitted source. Rows expose `source: user|stock`. This filter composes with appearance/favorites before the display cap and never constrains fresh Apply/Capture/favorite or removes available Restore.
 
 Catalog retains baseline row fields and adds `favorite`, `category` (`light`/`dark`/`unknown`), `swatches` (up to12 validated hex colors); combination rows add `collection:"Saved combinations"` and local `preview`. Background relative luminance >0.179 is classified light; missing background stays unknown. Stock colors are overlaid by valid user colors; accent and preview behavior remains compatible. Filtering precedes the 256-row display cap. Favorites still require fresh installed/pair membership independent of filters/cap. Primary action is `apply`; secondary fixed verbs are `favorite`, `capture`, and conditional `restore`. Successful Apply updates recent only after confirmation; preference-storage failure becomes a truthful warning, not a fabricated setter failure.
 
@@ -46,6 +52,8 @@ After normal theme confirmation, pair Apply requires shell ping, persistent `oma
 
 Restore accepts the original receipt selection or `restore:last`, even if the applied theme row disappeared. Another selected row is not Restore authority. Current theme name/generation must match the owned receipt. Pair Restore also requires matching owned snapshots and no unrelated wallpaper selection. A pending receipt preserves the post-hook observed wallpaper and intended target so an unacknowledged wallpaper dispatch can be compensated without accepting arbitrary divergence. On success it reapplies the prior installed theme through normal hooks, reapplies the previous verified wallpaper for a pair, and clears the one-level receipt. It is **not a full rollback** of hooks/app retints. Restore itself can fail partially; a changed generation prevents blindly repeating it. No independent automatic rollback daemon is claimed.
 
+Common display keys are literal, independent enum options saved/reset by the existing helper. Defaults preserve earlier behavior; native UI applies density/layout and retains display ordering. Backend `sortOrder` runs after saved domain filters and before the 256-row cap on the full admitted bounded set: `default` preserves input order, `name` compares lowercase labels in UTF-16 ordinal order (not locale/casefold), and `favorites-first` stably partitions favorites using bounded set membership. Equal keys preserve input order. Transient search and native Favorites/Recent/collection views remain local to returned rows; they do not trigger a broader scan. These keys do not change source tokens, safe roots, fresh action membership, Restore, store budgets or wire framing. Existing stores that omit the new keys receive defaults in memory, without a read-time migration write.
+
 ## Bounds and verification
 
 Directory scans cap1024 entries (overfull directories skipped). Theme signatures cap2048 entries, depth5,32 MiB/file and128 MiB total direct-background hashing across stock/overlay. Native hard-link/unlink ctime-only snapshot bookkeeping is tolerated only for direct still backgrounds via content hashes; preserved-mtime edits, type/mode/owner changes and FD-read races remain checked. No global dropping of ctime guards.
@@ -58,4 +66,4 @@ Run only the shipped offline runner, with `TMPDIR` already naming an existing pr
 env -u PYTHONPATH /usr/bin/python3 scripts/run-tests.py --backend-only
 ```
 
-It uses offline bwrap, cleared HOME/env, masked production setters, no live sockets and controlled fixture providers. Feature and regression RED/GREEN receipts are in ignored `release-output/v030-tdd/`; exact final commands/counts/hashes and outstanding integration criteria are in `release-output/v030-result.json`. These are local backend results, not hosted CI, native pixel verification, installation or publication. Provenance: NOTICE.backend.md and `runtime/0.3.0/data/source-ledger.json`.
+It uses offline bwrap, cleared HOME/env, masked production setters, no live sockets and controlled fixture providers. The shipped `tests/test_v040.py` covers common enum persistence/rejection/Reset and the new domain behavior; existing backend, v0.3 and store regressions remain. Historical v0.3 receipts, when present under `release-output/v030-tdd/` and `release-output/v030-result.json`, are not v0.4 verification. These are local backend results, not hosted CI, native pixel verification, installation or publication. Provenance: NOTICE.backend.md and `runtime/0.4.0/data/source-ledger.json`.
