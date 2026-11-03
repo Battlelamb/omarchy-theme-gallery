@@ -4,7 +4,7 @@
 
 Browse installed themes with local previews and real color swatches. Narrow the gallery to user or stock sources, save favorites, and capture a named theme–wallpaper combination without changing the desktop.
 
-> **0.4.0 development candidate — not a stable release or installed upgrade.** Backend behavior is checked offline with fixture providers. Native UI integration, live Apply/Restore and the full nested upgrade/rollback gate require separate qualification.
+> **0.4.1 development candidate — not a stable release or installed upgrade.** Backend behavior is checked offline with fixture providers. Native UI integration, live Apply/Restore and the full nested upgrade/rollback gate require separate qualification.
 
 ![Theme Gallery 0.4.0 native Browse with illustrative catalogue data](preview.png)
 
@@ -25,10 +25,12 @@ Requires **Omarchy Quattro's native shell**, **Python 3.11+**, and Omarchy's ins
 
 ```sh
 omarchy plugin add https://github.com/Battlelamb/omarchy-theme-gallery.git --enable
-omarchy-shell shell summon leviathan.theme-gallery
+omarchy-shell shell summon battlelamb.theme-gallery
 ```
 
-Git installation follows the repository source, not an unreleased candidate or stable tag. No themes, wallpapers or fonts are installed. If you already have **Super+Space → Appearance → Theme Gallery**, keep that shortcut; the summon command also works independently.
+Git installation follows the repository source, not an unreleased candidate or stable tag. No themes, wallpapers or fonts are installed. The summon command works independently of any menu entry or dedicated hotkey.
+
+**Namespace migration:** existing installation, enabled-plugin, menu and binding references need updating to `battlelamb.theme-gallery`. Preferences and recovery data stay at their stable paths; a normal source update does not rename plugin IDs automatically.
 
 ## Explore and choose
 
@@ -92,12 +94,12 @@ It clears HOME/environment, masks production setters and excludes network/live d
 Missing theme? Clear search/view/Configure filters, Refresh, then check safe installation and scan limits. Refused Restore? Check for external state changes; do not bypass ownership checks.
 
 ```sh
-omarchy-shell shell hide leviathan.theme-gallery
-omarchy plugin disable leviathan.theme-gallery
+omarchy-shell shell hide battlelamb.theme-gallery
+omarchy plugin disable battlelamb.theme-gallery
 # Optional; does not remove preferences/snapshots or undo desktop changes:
-omarchy plugin remove leviathan.theme-gallery
+omarchy plugin remove battlelamb.theme-gallery
 ```
 
 **GPL-3.0-only** · [License](LICENSE) · [Source notices](NOTICE.md) · [Backend attribution](NOTICE.backend.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md)
 
-Independent community plugin by Ömer Eren; not an official Omarchy or HyDE release.
+Independent community plugin by Battlelamb; not an official Omarchy or HyDE release.

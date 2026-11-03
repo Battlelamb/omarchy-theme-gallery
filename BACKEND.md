@@ -1,18 +1,18 @@
-# Theme Gallery backend — v0.4.0
+# Theme Gallery backend — v0.4.1
 
 ## Exact CLI
 
 Run from the plugin checkout (the backend itself does not depend on cwd):
 
 ```sh
-/usr/bin/python3 runtime/0.4.0/backend.py catalog
-/usr/bin/python3 runtime/0.4.0/backend.py preferences
-/usr/bin/python3 runtime/0.4.0/backend.py preferences --apply --payload '{"options":{"themeSource":"user","appearance":"dark","favoritesOnly":false}}'
-/usr/bin/python3 runtime/0.4.0/backend.py action --id theme:INSTALLED-SLUG --verb favorite --apply
-/usr/bin/python3 runtime/0.4.0/backend.py action --id theme:INSTALLED-SLUG --verb capture --apply --payload '{"name":"Reading","wallpaper":"/absolute/supported/local/image.png"}'
-/usr/bin/python3 runtime/0.4.0/backend.py action --id ID-FROM-CATALOG --verb apply --apply
-/usr/bin/python3 runtime/0.4.0/backend.py action --id restore:last --verb restore --apply
-/usr/bin/python3 runtime/0.4.0/backend.py preferences --apply --payload '{"reset":true}'
+/usr/bin/python3 runtime/0.4.1/backend.py catalog
+/usr/bin/python3 runtime/0.4.1/backend.py preferences
+/usr/bin/python3 runtime/0.4.1/backend.py preferences --apply --payload '{"options":{"themeSource":"user","appearance":"dark","favoritesOnly":false}}'
+/usr/bin/python3 runtime/0.4.1/backend.py action --id theme:INSTALLED-SLUG --verb favorite --apply
+/usr/bin/python3 runtime/0.4.1/backend.py action --id theme:INSTALLED-SLUG --verb capture --apply --payload '{"name":"Reading","wallpaper":"/absolute/supported/local/image.png"}'
+/usr/bin/python3 runtime/0.4.1/backend.py action --id ID-FROM-CATALOG --verb apply --apply
+/usr/bin/python3 runtime/0.4.1/backend.py action --id restore:last --verb restore --apply
+/usr/bin/python3 runtime/0.4.1/backend.py preferences --apply --payload '{"reset":true}'
 ```
 
 `INSTALLED-SLUG`, the wallpaper path and `ID-FROM-CATALOG` are placeholders, not literal valid selections. `capture` accepts exactly `name` and optional `wallpaper`; omitting wallpaper uses the validated current-background link target. It requires an installed `theme:` row, not another combination. A name is nonempty/control-free, ≤64 characters, and cannot replace an existing named collection. Paths are ≤251 characters. Capture saves preferences only and never invokes setters. It inserts its named record using the preference store’s locked targeted merge with an expected-absent check inside the same lock. Other collections acknowledged concurrently through the preferences CLI survive; a concurrent same-name save wins admission and the stale Capture refuses without changing stored bytes. Other verbs accept **no payload**.
@@ -66,4 +66,4 @@ Run only the shipped offline runner, with `TMPDIR` already naming an existing pr
 env -u PYTHONPATH /usr/bin/python3 scripts/run-tests.py --backend-only
 ```
 
-It uses offline bwrap, cleared HOME/env, masked production setters, no live sockets and controlled fixture providers. The shipped `tests/test_v040.py` covers common enum persistence/rejection/Reset and the new domain behavior; existing backend, v0.3 and store regressions remain. Historical v0.3 receipts, when present under `release-output/v030-tdd/` and `release-output/v030-result.json`, are not v0.4 verification. These are local backend results, not hosted CI, native pixel verification, installation or publication. Provenance: NOTICE.backend.md and `runtime/0.4.0/data/source-ledger.json`.
+It uses offline bwrap, cleared HOME/env, masked production setters, no live sockets and controlled fixture providers. The shipped `tests/test_v040.py` covers common enum persistence/rejection/Reset and the new domain behavior; existing backend, v0.3 and store regressions remain. Historical v0.3 receipts, when present under `release-output/v030-tdd/` and `release-output/v030-result.json`, are not v0.4 verification. These are local backend results, not hosted CI, native pixel verification, installation or publication. Provenance: NOTICE.backend.md and `runtime/0.4.1/data/source-ledger.json`.

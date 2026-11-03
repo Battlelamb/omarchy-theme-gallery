@@ -1,16 +1,16 @@
 {
   "schemaVersion": 1,
-  "id": "leviathan.theme-gallery",
+  "id": "battlelamb.theme-gallery",
   "name": "Theme Gallery",
-  "version": "0.4.0",
-  "author": "Ömer Eren",
+  "version": "0.4.1",
+  "author": "Battlelamb",
   "license": "GPL-3.0-only",
-  "description": "Browse installed stock/user themes and explicitly apply through normal Omarchy hooks. Restore selects the previous theme using an owned receipt; it is not a universal rollback of hook side effects. Open: omarchy-shell shell summon leviathan.theme-gallery. Type to search; arrows select; Enter acts; Esc closes.",
+  "description": "Browse installed stock/user themes and explicitly apply through normal Omarchy hooks. Restore selects the previous theme using an owned receipt; it is not a universal rollback of hook side effects. Open: omarchy-shell shell summon battlelamb.theme-gallery. Type to search; arrows select; Enter acts; Esc closes.",
   "kinds": [
     "overlay"
   ],
   "keepLoaded": true,
   "entryPoints": {
-    "overlay": "runtime/0.4.0/ThemeGallery.qml"
+    "overlay": "runtime/0.4.1/ThemeGallery.qml"
   }
 }
